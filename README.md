@@ -224,7 +224,10 @@ Raised when VAD processing fails.
 - FFmpeg (must be installed separately)
 - numpy >= 1.26.4
 - funasr-onnx >= 0.4.1
-- ffmpeg-audio >= 0.1.3
+- ffmpeg-audio >= 0.1.2
+- jieba >= 0.42.1
+- torch >= 2.9.1
+- setuptools == 80.8.0 (to avoid UserWarning from jieba about deprecated pkg_resources API)
 
 ## License
 
