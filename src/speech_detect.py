@@ -68,7 +68,7 @@ class SpeechDetector:
         chunk_duration_sec: int = None,
         start_ms: int = None,
         duration_ms: int = None,
-    ) -> tuple["list[VadSegment]", "list[VadSegment]"]:
+    ) -> tuple[list[VadSegment], list[VadSegment]]:
         """
         Detect speech segments and non-speech gaps in audio/video file using streaming processing.
 
@@ -157,7 +157,7 @@ class SpeechDetector:
         return speech_segments, gaps
 
     @staticmethod
-    def _derive_non_speech_gaps(speech_segments: "list[VadSegment]", audio_length_samples: int) -> "list[VadSegment]":
+    def _derive_non_speech_gaps(speech_segments: list[VadSegment], audio_length_samples: int) -> list[VadSegment]:
         """
         Derive non-speech gaps from speech segments.
 

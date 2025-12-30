@@ -25,7 +25,7 @@ class VadParser:
         """Initialize VAD parser."""
         self.current_start_ms = -1
 
-    def _process_segment_pair(self, beg_ms: int, end_ms: int, completed_segments: "list[VadSegment]") -> None:
+    def _process_segment_pair(self, beg_ms: int, end_ms: int, completed_segments: list[VadSegment]) -> None:
         """
         Process a single [start, end] pair, supporting three cases:
         1. [[beg, -1]] -> Speech start detected but not ended (partial segment)
@@ -79,7 +79,7 @@ class VadParser:
             # If there was an unclosed start, reset it (new complete segment encountered)
             self.current_start_ms = -1
 
-    def parse(self, vad_output: list) -> "list[VadSegment]":
+    def parse(self, vad_output: list) -> list[VadSegment]:
         """
         Parse VAD model inference output and return completed segments.
 
@@ -120,7 +120,7 @@ class VadParser:
 
         return completed_segments
 
-    def flush(self) -> "list[VadSegment]":
+    def flush(self) -> list[VadSegment]:
         """
         Flush parser state at end of stream.
 
