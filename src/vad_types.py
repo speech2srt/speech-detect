@@ -1,0 +1,27 @@
+"""
+Type definitions for VAD detection.
+
+Defines TypedDict structures for VAD segments used throughout the package.
+"""
+
+from typing import TypedDict
+
+
+class VadSegment(TypedDict):
+    """
+    VAD segment type.
+
+    Represents a time segment (can be speech segment or non-speech gap).
+    Timestamps are relative to the start of the audio stream.
+
+    This type is used for:
+    - Speech segments: Detected speech time periods
+    - Non-speech gaps: Non-speech time periods
+
+    Attributes:
+        start: Segment start time in milliseconds (integer).
+        end: Segment end time in milliseconds (integer).
+    """
+
+    start: int
+    end: int
