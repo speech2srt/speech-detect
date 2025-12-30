@@ -68,6 +68,7 @@ class SpeechDetector:
         chunk_duration_sec: int = None,
         start_ms: int = None,
         duration_ms: int = None,
+        merge_gap_threshold_ms: int = None,
     ) -> tuple[list[VadSegment], list[VadSegment]]:
         """
         Detect speech segments and non-speech gaps in audio/video file using streaming processing.
@@ -80,6 +81,10 @@ class SpeechDetector:
             chunk_duration_sec: Chunk duration in seconds. None uses default (20 minutes).
             start_ms: Start position in milliseconds. None starts from beginning of file.
             duration_ms: Total duration to process in milliseconds. None processes to end of file.
+            merge_gap_threshold_ms: Gap threshold in milliseconds. Adjacent speech segments with gaps
+                                   smaller than this threshold will be merged into a single segment.
+                                   None (default) disables merging. If <= 0, a warning will be logged
+                                   and merging will be disabled.
 
         Returns:
             tuple[list[VadSegment], list[VadSegment]]: Tuple of (speech_segments, gaps).
@@ -90,6 +95,11 @@ class SpeechDetector:
         Raises:
             VadProcessingError: Error occurred during processing.
         """
+        # Validate merge_gap_threshold_ms parameter
+        if merge_gap_threshold_ms is not None and merge_gap_threshold_ms < 0:
+            logger.warning(f"merge_gap_threshold_ms must be >= 0, got {merge_gap_threshold_ms}. Merging will be disabled.")
+            merge_gap_threshold_ms = None
+
         parser = VadParser()
         param_dict = {"in_cache": []}
         speech_segments = []
@@ -151,6 +161,13 @@ class SpeechDetector:
                 details={"exception_type": type(e).__name__},
             ) from e
 
+        # Merge adjacent segments if threshold is specified and valid
+        if merge_gap_threshold_ms is not None:
+            if merge_gap_threshold_ms <= 0:
+                logger.warning(f"merge_gap_threshold_ms must be > 0 to enable merging, got {merge_gap_threshold_ms}. Merging will be disabled.")
+            else:
+                speech_segments = self._merge_adjacent_segments(speech_segments, merge_gap_threshold_ms)
+
         # Derive non-speech gaps from speech segments
         gaps = self._derive_non_speech_gaps(speech_segments, total_samples)
 
@@ -198,3 +215,45 @@ class SpeechDetector:
             gaps.append({"start": last_speech["end"], "end": duration_ms})
 
         return gaps
+
+    @staticmethod
+    def _merge_adjacent_segments(speech_segments: list[VadSegment], threshold_ms: int) -> list[VadSegment]:
+        """
+        Merge adjacent speech segments if the gap between them is smaller than threshold.
+
+        This is useful for handling brief pauses in speech (e.g., breathing, thinking pauses)
+        that should be considered part of continuous speech rather than separate segments.
+
+        Args:
+            speech_segments: List of speech segments, format: [{"start": ms, "end": ms}, ...]
+                           Must be sorted by start time (which is guaranteed by streaming processing).
+            threshold_ms: Gap threshold in milliseconds. Segments with gaps smaller than this
+                         will be merged. Must be >= 0.
+
+        Returns:
+            list[VadSegment]: Merged speech segments, format: [{"start": ms, "end": ms}, ...]
+        """
+        if not speech_segments or len(speech_segments) <= 1:
+            return speech_segments
+
+        if threshold_ms < 0:
+            raise ValueError(f"threshold_ms must be >= 0, got {threshold_ms}")
+
+        merged = []
+        current_segment = speech_segments[0].copy()
+
+        for next_segment in speech_segments[1:]:
+            gap = next_segment["start"] - current_segment["end"]
+
+            if gap <= threshold_ms:
+                # Merge: extend current segment to include next segment
+                current_segment["end"] = next_segment["end"]
+            else:
+                # Gap is too large, save current segment and start new one
+                merged.append(current_segment)
+                current_segment = next_segment.copy()
+
+        # Add the last segment
+        merged.append(current_segment)
+
+        return merged
