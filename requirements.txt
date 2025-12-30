@@ -1,4 +1,4 @@
-numpy>=1.26.4
-onnxruntime>=1.23.2
-funasr-onnx>=0.4.1
 ffmpeg-audio>=0.1.2
+funasr-onnx>=0.4.1
+jieba>=0.42.1
+torch>=2.9.1
