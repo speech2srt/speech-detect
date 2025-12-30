@@ -7,6 +7,7 @@ A Python library for detecting speech segments and non-speech gaps in audio/vide
 - **Streaming VAD detection**: Process large audio/video files in chunks without loading everything into memory
 - **Speech segment detection**: Detect all speech segments in audio/video files
 - **Non-speech gap derivation**: Compute non-speech gaps from speech segments
+- **Adjacent segment merging**: Merge adjacent speech segments with gaps smaller than a threshold (useful for handling brief pauses)
 - **Format support**: Supports all audio/video formats that FFmpeg supports (MP3, WAV, FLAC, Opus, MP4, etc.)
 - **Time range support**: Support start time and duration parameters for partial processing
 - **Memory efficient**: Constant memory usage regardless of audio file duration
@@ -113,6 +114,17 @@ speech_segments, gaps = detector.detect(
 )
 ```
 
+### Merging Adjacent Segments
+
+```python
+# Merge adjacent segments with gaps smaller than 300ms
+# Useful for handling brief pauses in speech (breathing, thinking pauses)
+speech_segments, gaps = detector.detect(
+    file_path="audio.mp3",
+    merge_gap_threshold_ms=300,
+)
+```
+
 ## API Reference
 
 ### SpeechDetector
@@ -134,7 +146,7 @@ Initialize speech detector.
 - `VadModelNotFoundError`: If model directory is not found or not set
 - `VadModelInitializationError`: If model initialization fails
 
-#### `SpeechDetector.detect(file_path, chunk_duration_sec=None, start_ms=None, duration_ms=None)`
+#### `SpeechDetector.detect(file_path, chunk_duration_sec=None, start_ms=None, duration_ms=None, merge_gap_threshold_ms=None)`
 
 Detect speech segments in audio/video file using streaming processing.
 
@@ -144,6 +156,7 @@ Detect speech segments in audio/video file using streaming processing.
 - `chunk_duration_sec` (int, optional): Duration of each chunk in seconds. Defaults to 1200 (20 minutes). Must be > 0 if provided.
 - `start_ms` (int, optional): Start position in milliseconds. None means from file beginning. If None but `duration_ms` is provided, defaults to 0.
 - `duration_ms` (int, optional): Total duration to process in milliseconds. None means process until end. If specified, processing stops when this duration is reached.
+- `merge_gap_threshold_ms` (int, optional): Gap threshold in milliseconds. Adjacent speech segments with gaps smaller than this threshold will be merged into a single segment. None (default) disables merging. If <= 0, a warning will be logged and merging will be disabled. Useful for handling brief pauses in speech (e.g., breathing, thinking pauses) that should be considered part of continuous speech.
 
 **Returns:**
 
