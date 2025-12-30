@@ -14,7 +14,7 @@ from .exceptions import VadModelInitializationError, VadModelNotFoundError, VadP
 from .speech_detect import SpeechDetector
 from .vad_types import VadSegment
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 # Configure library root logger
 # Use NullHandler to ensure library remains silent when user hasn't configured logging
