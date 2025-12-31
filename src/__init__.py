@@ -15,7 +15,7 @@ from .rms_calculator import RMSCalculator
 from .sd_types import RMSPoint, VadSegment
 from .speech_detect import SpeechDetector
 
-__version__ = "0.1.4"
+__version__ = "0.2.0"
 
 # Configure library root logger
 # Use NullHandler to ensure library remains silent when user hasn't configured logging
