@@ -31,6 +31,10 @@ class SpeechDetector:
 
     SAMPLE_RATE = 16000  # Fixed sample rate constant (Hz)
 
+    # 默认参数常量
+    DEFAULT_RMS_FRAME_SIZE_MS = 100
+    DEFAULT_RMS_OUTPUT_INTERVAL_MS = 100
+
     def __init__(self, model_dir: str = None):
         """
         Initialize speech detector.
@@ -70,8 +74,8 @@ class SpeechDetector:
         start_ms: int = None,
         duration_ms: int = None,
         merge_gap_threshold_ms: int = None,
-        rms_frame_size_ms: int = 100,
-        rms_output_interval_ms: int = 100,
+        rms_frame_size_ms: int = DEFAULT_RMS_FRAME_SIZE_MS,
+        rms_output_interval_ms: int = DEFAULT_RMS_OUTPUT_INTERVAL_MS,
     ) -> tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]:
         """
         Detect speech segments and non-speech gaps in audio/video file using streaming processing.
@@ -103,20 +107,9 @@ class SpeechDetector:
 
         Raises:
             VadProcessingError: Error occurred during processing.
-            ValueError: If RMS curve parameters are invalid.
         """
-        # Validate RMS curve parameters
-        if rms_frame_size_ms <= 0:
-            raise ValueError(f"rms_frame_size_ms must be > 0, got {rms_frame_size_ms}")
-        if rms_output_interval_ms <= 0:
-            raise ValueError(f"rms_output_interval_ms must be > 0, got {rms_output_interval_ms}")
-        if rms_output_interval_ms > rms_frame_size_ms:
-            raise ValueError(
-                f"rms_output_interval_ms ({rms_output_interval_ms}) must be <= "
-                f"rms_frame_size_ms ({rms_frame_size_ms})"
-            )
-
         # Initialize RMS calculator (always enabled)
+        # RMSCalculator will automatically validate and correct invalid parameters with warnings
         rms_calculator = RMSCalculator(
             frame_size_ms=rms_frame_size_ms,
             output_interval_ms=rms_output_interval_ms,
