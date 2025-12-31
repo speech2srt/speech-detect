@@ -134,7 +134,8 @@ class RMSCalculator:
                 # 只保存未输出过的点（避免重复）
                 if time_ms > self.last_output_time_ms:
                     # 使用 RMSPoint 类型定义（TypedDict）
-                    self.rms_curve.append({"ms": time_ms, "value": float(rms_curve[i])})
+                    # 限制 RMS 值精度为 6 位小数，减小文件大小
+                    self.rms_curve.append({"ms": time_ms, "value": round(float(rms_curve[i]), 6)})
                     self.last_output_time_ms = time_ms
 
             # 7. 更新 buffer 和当前时间
