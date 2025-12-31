@@ -1,16 +1,25 @@
 # speech-detect
 
-A Python library for detecting speech segments and non-speech gaps in audio/video files using FSMN-VAD-ONNX with streaming processing.
+A Python library for detecting speech segments, non-speech gaps, and RMS energy curves in audio/video files using FSMN-VAD-ONNX with streaming processing.
 
 ## Features
 
-- **Streaming VAD detection**: Process large audio/video files in chunks without loading everything into memory
-- **Speech segment detection**: Detect all speech segments in audio/video files
-- **Non-speech gap derivation**: Compute non-speech gaps from speech segments
-- **Adjacent segment merging**: Merge adjacent speech segments with gaps smaller than a threshold (useful for handling brief pauses)
-- **Format support**: Supports all audio/video formats that FFmpeg supports (MP3, WAV, FLAC, Opus, MP4, etc.)
-- **Time range support**: Support start time and duration parameters for partial processing
+### Core Functionality
+
+- **Speech segment detection**: Detect all speech segments in audio/video files with precise timestamps
+- **Non-speech gap derivation**: Automatically compute non-speech gaps (silence periods) from detected speech segments
+- **RMS energy detection**: Compute RMS (Root Mean Square) energy curve for audio analysis and visualization
+
+### Advanced Features
+
+- **Adjacent segment merging**: Merge adjacent speech segments with gaps smaller than a threshold (useful for handling brief pauses like breathing or thinking pauses)
+
+### Technical Capabilities
+
+- **Streaming processing**: Process large audio/video files in chunks without loading everything into memory
 - **Memory efficient**: Constant memory usage regardless of audio file duration
+- **Format support**: Supports all audio/video formats that FFmpeg supports (MP3, WAV, FLAC, Opus, MP4, AVI, etc.)
+- **Time range support**: Support start time and duration parameters for partial processing
 
 ## Installation
 
@@ -60,7 +69,7 @@ detector = SpeechDetector(model_dir="/path/to/fsmn-vad-onnx")
 
 ## Quick Start
 
-### Detect Speech Segments and Gaps
+### Detect Speech Segments, Gaps, and RMS Energy Curve
 
 ```python
 from speech_detect import SpeechDetector
@@ -68,8 +77,8 @@ from speech_detect import SpeechDetector
 # Initialize detector (reads MODEL_FSMN_VAD_DIR from environment)
 detector = SpeechDetector()
 
-# Detect speech segments and non-speech gaps in an audio file
-speech_segments, gaps = detector.detect("audio.mp3")
+# Detect speech segments, non-speech gaps, and RMS energy curve in an audio file
+speech_segments, gaps, rms_curve = detector.detect("audio.mp3")
 
 # speech_segments is a list of dictionaries: [{"start": 0, "end": 500}, ...]
 for segment in speech_segments:
@@ -84,20 +93,26 @@ for gap in gaps:
     end_ms = gap["end"]
     duration = end_ms - start_ms
     print(f"Non-speech gap: {start_ms}ms - {end_ms}ms (duration: {duration}ms)")
+
+# rms_curve is a list of dictionaries: [{"ms": 0, "value": 0.123}, ...]
+for point in rms_curve:
+    time_ms = point["ms"]
+    rms_value = point["value"]
+    print(f"RMS at {time_ms}ms: {rms_value}")
 ```
 
 ### Processing Specific Time Range
 
 ```python
 # Process only the first 30 seconds
-speech_segments, gaps = detector.detect(
+speech_segments, gaps, rms_curve = detector.detect(
     file_path="audio.mp3",
     start_ms=0,
     duration_ms=30000,
 )
 
 # Process from 10 seconds, duration 5 seconds
-speech_segments, gaps = detector.detect(
+speech_segments, gaps, rms_curve = detector.detect(
     file_path="audio.mp3",
     start_ms=10000,
     duration_ms=5000,
@@ -108,7 +123,7 @@ speech_segments, gaps = detector.detect(
 
 ```python
 # Use 1-minute chunks instead of default 20-minute chunks
-speech_segments, gaps = detector.detect(
+speech_segments, gaps, rms_curve = detector.detect(
     file_path="audio.mp3",
     chunk_duration_sec=60,
 )
@@ -119,10 +134,25 @@ speech_segments, gaps = detector.detect(
 ```python
 # Merge adjacent segments with gaps smaller than 300ms
 # Useful for handling brief pauses in speech (breathing, thinking pauses)
-speech_segments, gaps = detector.detect(
+speech_segments, gaps, rms_curve = detector.detect(
     file_path="audio.mp3",
     merge_gap_threshold_ms=300,
 )
+```
+
+### Custom RMS Energy Detection Parameters
+
+```python
+# Customize RMS calculation window size and output interval
+# frame_size_ms: Convolution window size (default: 100ms)
+# output_interval_ms: Output sampling interval, can be 50ms or 100ms (default: 100ms)
+speech_segments, gaps, rms_curve = detector.detect(
+    file_path="audio.mp3",
+    rms_frame_size_ms=100,      # 100ms window for RMS calculation
+    rms_output_interval_ms=50,   # Output every 50ms for higher resolution
+)
+
+# The RMS curve can be used for audio visualization, energy analysis, or as input for other audio processing tasks
 ```
 
 ## API Reference
@@ -146,9 +176,9 @@ Initialize speech detector.
 - `VadModelNotFoundError`: If model directory is not found or not set
 - `VadModelInitializationError`: If model initialization fails
 
-#### `SpeechDetector.detect(file_path, chunk_duration_sec=None, start_ms=None, duration_ms=None, merge_gap_threshold_ms=None)`
+#### `SpeechDetector.detect(file_path, chunk_duration_sec=None, start_ms=None, duration_ms=None, merge_gap_threshold_ms=None, rms_frame_size_ms=None, rms_output_interval_ms=None)`
 
-Detect speech segments in audio/video file using streaming processing.
+Detect speech segments, non-speech gaps, and RMS energy curve in audio/video file using streaming processing.
 
 **Parameters:**
 
@@ -157,16 +187,22 @@ Detect speech segments in audio/video file using streaming processing.
 - `start_ms` (int, optional): Start position in milliseconds. None means from file beginning. If None but `duration_ms` is provided, defaults to 0.
 - `duration_ms` (int, optional): Total duration to process in milliseconds. None means process until end. If specified, processing stops when this duration is reached.
 - `merge_gap_threshold_ms` (int, optional): Gap threshold in milliseconds. Adjacent speech segments with gaps smaller than this threshold will be merged into a single segment. None (default) disables merging. If <= 0, a warning will be logged and merging will be disabled. Useful for handling brief pauses in speech (e.g., breathing, thinking pauses) that should be considered part of continuous speech.
+- `rms_frame_size_ms` (int, optional): Convolution window size in milliseconds for RMS calculation. Defaults to 100ms. If <= 0, a warning will be logged and default value (100ms) will be used.
+- `rms_output_interval_ms` (int, optional): Output sampling interval in milliseconds for RMS curve. Defaults to 100ms. Can be 50ms or 100ms. If <= 0, a warning will be logged and default value (100ms) will be used. If > `rms_frame_size_ms`, it will be adjusted to `rms_frame_size_ms`.
 
 **Returns:**
 
-- `tuple[list[VadSegment], list[VadSegment]]`: Tuple of (speech_segments, gaps)
+- `tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]`: Tuple of (speech_segments, gaps, rms_curve)
   - `speech_segments`: List of speech segments, format: `[{"start": ms, "end": ms}, ...]`
     - Timestamps are relative to audio start (from 0)
     - Unit: milliseconds
   - `gaps`: List of non-speech gaps, format: `[{"start": ms, "end": ms}, ...]`
     - Timestamps are relative to audio start (from 0)
     - Unit: milliseconds
+  - `rms_curve`: RMS energy curve data, always computed and returned, format: `[{"ms": int, "value": float}, ...]`
+    - `ms`: Time position in milliseconds (relative to audio start, from 0)
+    - `value`: RMS energy value (float, typically in range [0.0, 1.0])
+    - Unit: milliseconds for time, dimensionless for value
 
 **Raises:**
 
@@ -187,6 +223,21 @@ A TypedDict representing a time segment (can be a speech segment or a non-speech
 
 ```python
 segment: VadSegment = {"start": 100, "end": 500}
+```
+
+### RMSPoint
+
+A TypedDict representing a point on the RMS energy curve.
+
+**Fields:**
+
+- `ms` (int): Time position in milliseconds (relative to audio start, from 0)
+- `value` (float): RMS energy value (typically in range [0.0, 1.0])
+
+**Example:**
+
+```python
+point: RMSPoint = {"ms": 100, "value": 0.123}
 ```
 
 ## Exceptions
@@ -223,6 +274,7 @@ Raised when VAD processing fails.
 - Python >= 3.10
 - FFmpeg (must be installed separately)
 - numpy >= 1.26.4
+- scipy >= 1.11.0 (for RMS energy calculation)
 - funasr-onnx >= 0.4.1
 - ffmpeg-audio >= 0.1.2
 - jieba >= 0.42.1
