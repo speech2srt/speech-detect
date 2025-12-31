@@ -155,6 +155,15 @@ speech_segments, gaps, rms_curve = detector.detect(
 # The RMS curve can be used for audio visualization, energy analysis, or as input for other audio processing tasks
 ```
 
+## RMS Energy Design Principles
+
+`speech-detect` always emits an RMS energy curve together with VAD results. The feature is designed to stay lightweight while providing meaningful downstream insight:
+
+- **Always-on streaming measurement**: RMS is computed chunk by chunk using a sliding, normalized window, so memory usage stays constant even for multi-hour recordings.
+- **Decoupled smoothing vs. resolution**: `rms_frame_size_ms` controls the convolution window (how aggressively noise is smoothed), while `rms_output_interval_ms` controls the sampling density. Allowing the interval to be smaller than the window lets you plot dense, smooth curves without losing smoothing benefits.
+- **Deterministic timeline**: Both parameters are expressed in milliseconds and map directly to timestamps in the returned `rms_curve`, making it trivial to align energy data with speech segments, captions, or UI waveforms.
+- **Downstream flexibility**: The curve can drive silence gating, highlight low-energy pauses, or simply power visual meters. Because it is always returned, callers can adopt it opportunistically without extra processing steps.
+
 ## API Reference
 
 ### SpeechDetector
