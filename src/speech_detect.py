@@ -13,7 +13,8 @@ from ffmpeg_audio import FFmpegAudio
 from funasr_onnx import Fsmn_vad_online
 
 from .exceptions import VadModelInitializationError, VadModelNotFoundError, VadProcessingError
-from .sd_types import VadSegment
+from .rms_calculator import RMSCalculator
+from .sd_types import RMSPoint, VadSegment
 from .vad_parser import VadParser
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,9 @@ class SpeechDetector:
         start_ms: int = None,
         duration_ms: int = None,
         merge_gap_threshold_ms: int = None,
-    ) -> tuple[list[VadSegment], list[VadSegment]]:
+        rms_frame_size_ms: int = 100,
+        rms_output_interval_ms: int = 100,
+    ) -> tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]:
         """
         Detect speech segments and non-speech gaps in audio/video file using streaming processing.
 
@@ -85,16 +88,40 @@ class SpeechDetector:
                                    smaller than this threshold will be merged into a single segment.
                                    None (default) disables merging. If <= 0, a warning will be logged
                                    and merging will be disabled.
+            rms_frame_size_ms: Convolution window size in milliseconds for RMS calculation.
+                              Default: 100ms.
+            rms_output_interval_ms: Output sampling interval in milliseconds for RMS curve.
+                                   Default: 100ms. Can be 50ms or 100ms.
 
         Returns:
-            tuple[list[VadSegment], list[VadSegment]]: Tuple of (speech_segments, gaps).
-                                                     - speech_segments: List of speech segments, format: [{"start": ms, "end": ms}, ...]
-                                                     - gaps: List of non-speech gaps, format: [{"start": ms, "end": ms}, ...]
-                                                     Timestamps are relative to audio start (0-based), in milliseconds.
+            tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]:
+                - speech_segments: List of speech segments, format: [{"start": ms, "end": ms}, ...]
+                - gaps: List of non-speech gaps, format: [{"start": ms, "end": ms}, ...]
+                - rms_curve: RMS curve data, always computed and returned.
+                           Format: [{"ms": int, "value": float}, ...]  # List[RMSPoint]
+                Timestamps are relative to audio start (0-based), in milliseconds.
 
         Raises:
             VadProcessingError: Error occurred during processing.
+            ValueError: If RMS curve parameters are invalid.
         """
+        # Validate RMS curve parameters
+        if rms_frame_size_ms <= 0:
+            raise ValueError(f"rms_frame_size_ms must be > 0, got {rms_frame_size_ms}")
+        if rms_output_interval_ms <= 0:
+            raise ValueError(f"rms_output_interval_ms must be > 0, got {rms_output_interval_ms}")
+        if rms_output_interval_ms > rms_frame_size_ms:
+            raise ValueError(
+                f"rms_output_interval_ms ({rms_output_interval_ms}) must be <= "
+                f"rms_frame_size_ms ({rms_frame_size_ms})"
+            )
+
+        # Initialize RMS calculator (always enabled)
+        rms_calculator = RMSCalculator(
+            frame_size_ms=rms_frame_size_ms,
+            output_interval_ms=rms_output_interval_ms,
+        )
+
         # Validate merge_gap_threshold_ms parameter
         if merge_gap_threshold_ms is not None and merge_gap_threshold_ms < 0:
             logger.warning(f"merge_gap_threshold_ms must be >= 0, got {merge_gap_threshold_ms}. Merging will be disabled.")
@@ -127,6 +154,9 @@ class SpeechDetector:
 
                 # Accumulate total sample count
                 total_samples += chunk_samples
+
+                # Calculate RMS curve (always computed)
+                rms_calculator.process_chunk(chunk)
 
                 # param_dict state is automatically maintained across chunks
                 result = self.model(audio_in=chunk, param_dict=param_dict)
@@ -171,7 +201,10 @@ class SpeechDetector:
         # Derive non-speech gaps from speech segments
         gaps = self._derive_non_speech_gaps(speech_segments, total_samples)
 
-        return speech_segments, gaps
+        # Get RMS curve data (always computed)
+        rms_curve = rms_calculator.finalize()
+
+        return speech_segments, gaps, rms_curve
 
     @staticmethod
     def _derive_non_speech_gaps(speech_segments: list[VadSegment], audio_length_samples: int) -> list[VadSegment]:
