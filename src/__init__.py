@@ -11,8 +11,8 @@ This package provides utilities for:
 import logging
 
 from .exceptions import VadModelInitializationError, VadModelNotFoundError, VadProcessingError
+from .sd_types import RMSPoint, VadSegment
 from .speech_detect import SpeechDetector
-from .vad_types import VadSegment
 
 __version__ = "0.1.4"
 
@@ -25,6 +25,7 @@ logger.addHandler(logging.NullHandler())
 __all__ = [
     "SpeechDetector",
     "VadSegment",
+    "RMSPoint",
     "VadModelNotFoundError",
     "VadModelInitializationError",
     "VadProcessingError",

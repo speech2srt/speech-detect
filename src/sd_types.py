@@ -1,7 +1,7 @@
 """
-Type definitions for VAD detection.
+Type definitions for Speech Detect package.
 
-Defines TypedDict structures for VAD segments used throughout the package.
+Defines TypedDict structures for VAD segments and energy curve data used throughout the package.
 """
 
 from typing import TypedDict
@@ -25,3 +25,18 @@ class VadSegment(TypedDict):
 
     start: int
     end: int
+
+
+class RMSPoint(TypedDict):
+    """
+    RMS point type.
+
+    Represents a point on the RMS energy curve.
+
+    Attributes:
+        ms: Time position in milliseconds (integer).
+        value: RMS energy value (float).
+    """
+
+    ms: int
+    value: float

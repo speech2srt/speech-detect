@@ -3,5 +3,8 @@ funasr-onnx>=0.4.1
 jieba>=0.42.1
 torch>=2.9.1
 
+# for RMS calculation
+scipy==1.13.0,<=1.16.0
+
 # for `jieba` to avoid a UserWarning: pkg_resources is deprecated as an API
 setuptools==80.8.0

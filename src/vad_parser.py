@@ -8,7 +8,7 @@ multiple chunks in streaming processing.
 
 import logging
 
-from .vad_types import VadSegment
+from .sd_types import VadSegment
 
 logger = logging.getLogger(__name__)
 

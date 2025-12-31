@@ -13,8 +13,8 @@ from ffmpeg_audio import FFmpegAudio
 from funasr_onnx import Fsmn_vad_online
 
 from .exceptions import VadModelInitializationError, VadModelNotFoundError, VadProcessingError
+from .sd_types import VadSegment
 from .vad_parser import VadParser
-from .vad_types import VadSegment
 
 logger = logging.getLogger(__name__)
 
