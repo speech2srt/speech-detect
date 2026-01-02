@@ -5,6 +5,7 @@ Computes RMS curve using streaming convolution for efficient processing.
 """
 
 import logging
+import os
 
 import numpy as np
 from scipy import signal
@@ -12,6 +13,46 @@ from scipy import signal
 from .sd_types import RMSPoint
 
 logger = logging.getLogger(__name__)
+
+
+def _get_default_frame_size_ms() -> int:
+    """
+    Get default frame size from environment variable or use default value.
+
+    Returns:
+        int: Frame size in milliseconds (default: 100ms)
+    """
+    env_value = os.getenv("RMS_FRAME_SIZE_MS")
+    if env_value:
+        try:
+            value = int(env_value)
+            if value > 0:
+                return value
+            else:
+                logger.warning(f"RMS_FRAME_SIZE_MS must be > 0, got {env_value}. Using default 100ms")
+        except ValueError:
+            logger.warning(f"Invalid RMS_FRAME_SIZE_MS={env_value}, using default 100ms")
+    return 100
+
+
+def _get_default_output_interval_ms() -> int:
+    """
+    Get default output interval from environment variable or use default value.
+
+    Returns:
+        int: Output interval in milliseconds (default: 50ms)
+    """
+    env_value = os.getenv("RMS_OUTPUT_INTERVAL_MS")
+    if env_value:
+        try:
+            value = int(env_value)
+            if value > 0:
+                return value
+            else:
+                logger.warning(f"RMS_OUTPUT_INTERVAL_MS must be > 0, got {env_value}. Using default 50ms")
+        except ValueError:
+            logger.warning(f"Invalid RMS_OUTPUT_INTERVAL_MS={env_value}, using default 50ms")
+    return 50
 
 
 class RMSCalculator:
@@ -22,35 +63,37 @@ class RMSCalculator:
     convolution, then samples at fixed intervals (e.g., 100ms or 50ms).
     """
 
-    # 采样率常量（固定为 16000 Hz）
+    # Sample rate constant (fixed at 16000 Hz)
     SAMPLE_RATE = 16000
 
-    # 默认参数常量
-    DEFAULT_FRAME_SIZE_MS = 100
-    DEFAULT_OUTPUT_INTERVAL_MS = 100
+    # Default parameter constants (can be overridden by environment variables)
+    RMS_FRAME_SIZE_MS = _get_default_frame_size_ms()
+    RMS_OUTPUT_INTERVAL_MS = _get_default_output_interval_ms()
 
     def __init__(
         self,
-        frame_size_ms: int = DEFAULT_FRAME_SIZE_MS,
-        output_interval_ms: int = DEFAULT_OUTPUT_INTERVAL_MS,
+        frame_size_ms: int = RMS_FRAME_SIZE_MS,
+        output_interval_ms: int = RMS_OUTPUT_INTERVAL_MS,
     ):
         """
         Initialize RMS calculator.
 
         Args:
-            frame_size_ms: Convolution window size in milliseconds. Invalid values (<= 0) will use default (100ms).
-            output_interval_ms: Output sampling interval in milliseconds. Invalid values (<= 0) will use default (100ms).
-                               Can be 50ms or 100ms. If > frame_size_ms, will be adjusted to frame_size_ms.
+            frame_size_ms: Convolution window size in milliseconds. Defaults to RMS_FRAME_SIZE_MS (default: 100ms).
+                          Invalid values (<= 0) will use default. Can be overridden by RMS_FRAME_SIZE_MS environment variable.
+            output_interval_ms: Output sampling interval in milliseconds. Defaults to RMS_OUTPUT_INTERVAL_MS (default: 50ms).
+                               Invalid values (<= 0) will use default. Can be overridden by RMS_OUTPUT_INTERVAL_MS environment variable.
+                               If > frame_size_ms, will be adjusted to frame_size_ms.
         """
-        # 验证并修正 frame_size_ms
+        # Validate and correct frame_size_ms
         if frame_size_ms <= 0:
-            logger.warning(f"frame_size_ms must be > 0, got {frame_size_ms}. Using default: {self.DEFAULT_FRAME_SIZE_MS}ms")
-            frame_size_ms = self.DEFAULT_FRAME_SIZE_MS
+            logger.warning(f"frame_size_ms must be > 0, got {frame_size_ms}. Using default: {self.RMS_FRAME_SIZE_MS}ms")
+            frame_size_ms = self.RMS_FRAME_SIZE_MS
 
-        # 验证并修正 output_interval_ms
+        # Validate and correct output_interval_ms
         if output_interval_ms <= 0:
-            logger.warning(f"output_interval_ms must be > 0, got {output_interval_ms}. Using default: {self.DEFAULT_OUTPUT_INTERVAL_MS}ms")
-            output_interval_ms = self.DEFAULT_OUTPUT_INTERVAL_MS
+            logger.warning(f"output_interval_ms must be > 0, got {output_interval_ms}. Using default: {self.RMS_OUTPUT_INTERVAL_MS}ms")
+            output_interval_ms = self.RMS_OUTPUT_INTERVAL_MS
 
         # 确保 output_interval_ms <= frame_size_ms
         if output_interval_ms > frame_size_ms:

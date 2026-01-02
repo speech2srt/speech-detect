@@ -20,6 +20,46 @@ from .vad_parser import VadParser
 logger = logging.getLogger(__name__)
 
 
+def _get_default_rms_frame_size_ms() -> int:
+    """
+    Get default RMS frame size from environment variable or use default value.
+
+    Returns:
+        int: Frame size in milliseconds (default: 100ms)
+    """
+    env_value = os.getenv("RMS_FRAME_SIZE_MS")
+    if env_value:
+        try:
+            value = int(env_value)
+            if value > 0:
+                return value
+            else:
+                logger.warning(f"RMS_FRAME_SIZE_MS must be > 0, got {env_value}. Using default 100ms")
+        except ValueError:
+            logger.warning(f"Invalid RMS_FRAME_SIZE_MS={env_value}, using default 100ms")
+    return 100
+
+
+def _get_default_rms_output_interval_ms() -> int:
+    """
+    Get default RMS output interval from environment variable or use default value.
+
+    Returns:
+        int: Output interval in milliseconds (default: 50ms)
+    """
+    env_value = os.getenv("RMS_OUTPUT_INTERVAL_MS")
+    if env_value:
+        try:
+            value = int(env_value)
+            if value > 0:
+                return value
+            else:
+                logger.warning(f"RMS_OUTPUT_INTERVAL_MS must be > 0, got {env_value}. Using default 50ms")
+        except ValueError:
+            logger.warning(f"Invalid RMS_OUTPUT_INTERVAL_MS={env_value}, using default 50ms")
+    return 50
+
+
 class SpeechDetector:
     """
     Speech Detector (streaming only)
@@ -31,9 +71,9 @@ class SpeechDetector:
 
     SAMPLE_RATE = 16000  # Fixed sample rate constant (Hz)
 
-    # 默认参数常量
-    DEFAULT_RMS_FRAME_SIZE_MS = 100
-    DEFAULT_RMS_OUTPUT_INTERVAL_MS = 100
+    # Default parameter constants (can be overridden by environment variables)
+    RMS_FRAME_SIZE_MS = _get_default_rms_frame_size_ms()
+    RMS_OUTPUT_INTERVAL_MS = _get_default_rms_output_interval_ms()
 
     def __init__(self, model_dir: str = None):
         """
@@ -74,8 +114,8 @@ class SpeechDetector:
         start_ms: int = None,
         duration_ms: int = None,
         merge_gap_threshold_ms: int = None,
-        rms_frame_size_ms: int = DEFAULT_RMS_FRAME_SIZE_MS,
-        rms_output_interval_ms: int = DEFAULT_RMS_OUTPUT_INTERVAL_MS,
+        rms_frame_size_ms: int = None,
+        rms_output_interval_ms: int = None,
     ) -> tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]:
         """
         Detect speech segments and non-speech gaps in audio/video file using streaming processing.
@@ -93,9 +133,10 @@ class SpeechDetector:
                                    None (default) disables merging. If <= 0, a warning will be logged
                                    and merging will be disabled.
             rms_frame_size_ms: Convolution window size in milliseconds for RMS calculation.
-                              Default: 100ms.
+                              Default: 100ms (can be overridden by RMS_FRAME_SIZE_MS environment variable).
             rms_output_interval_ms: Output sampling interval in milliseconds for RMS curve.
-                                   Default: 100ms. Can be 50ms or 100ms.
+                                   Default: 50ms (can be overridden by RMS_OUTPUT_INTERVAL_MS environment variable).
+                                   If > rms_frame_size_ms, will be adjusted to rms_frame_size_ms.
 
         Returns:
             tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]:
@@ -109,6 +150,12 @@ class SpeechDetector:
             VadProcessingError: Error occurred during processing.
         """
         # Initialize RMS calculator (always enabled)
+        # Use default values if not provided (can be overridden by environment variables)
+        if rms_frame_size_ms is None:
+            rms_frame_size_ms = self.RMS_FRAME_SIZE_MS
+        if rms_output_interval_ms is None:
+            rms_output_interval_ms = self.RMS_OUTPUT_INTERVAL_MS
+
         # RMSCalculator will automatically validate and correct invalid parameters with warnings
         rms_calculator = RMSCalculator(
             frame_size_ms=rms_frame_size_ms,

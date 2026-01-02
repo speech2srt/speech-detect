@@ -145,7 +145,7 @@ speech_segments, gaps, rms_curve = detector.detect(
 ```python
 # Customize RMS calculation window size and output interval
 # frame_size_ms: Convolution window size (default: 100ms)
-# output_interval_ms: Output sampling interval, can be 50ms or 100ms (default: 100ms)
+# output_interval_ms: Output sampling interval (default: 50ms)
 speech_segments, gaps, rms_curve = detector.detect(
     file_path="audio.mp3",
     rms_frame_size_ms=100,      # 100ms window for RMS calculation
@@ -154,6 +154,20 @@ speech_segments, gaps, rms_curve = detector.detect(
 
 # The RMS curve can be used for audio visualization, energy analysis, or as input for other audio processing tasks
 ```
+
+### Environment Variables for RMS Configuration
+
+You can configure default RMS parameters using environment variables:
+
+```bash
+# Set default frame size (default: 100ms)
+export RMS_FRAME_SIZE_MS=100
+
+# Set default output interval (default: 50ms)
+export RMS_OUTPUT_INTERVAL_MS=50
+```
+
+These environment variables will be used as defaults when `rms_frame_size_ms` and `rms_output_interval_ms` parameters are not explicitly provided to the `detect()` method.
 
 ## RMS Energy Design Principles
 
@@ -196,8 +210,8 @@ Detect speech segments, non-speech gaps, and RMS energy curve in audio/video fil
 - `start_ms` (int, optional): Start position in milliseconds. None means from file beginning. If None but `duration_ms` is provided, defaults to 0.
 - `duration_ms` (int, optional): Total duration to process in milliseconds. None means process until end. If specified, processing stops when this duration is reached.
 - `merge_gap_threshold_ms` (int, optional): Gap threshold in milliseconds. Adjacent speech segments with gaps smaller than this threshold will be merged into a single segment. None (default) disables merging. If <= 0, a warning will be logged and merging will be disabled. Useful for handling brief pauses in speech (e.g., breathing, thinking pauses) that should be considered part of continuous speech.
-- `rms_frame_size_ms` (int, optional): Convolution window size in milliseconds for RMS calculation. Defaults to 100ms. If <= 0, a warning will be logged and default value (100ms) will be used.
-- `rms_output_interval_ms` (int, optional): Output sampling interval in milliseconds for RMS curve. Defaults to 100ms. Can be 50ms or 100ms. If <= 0, a warning will be logged and default value (100ms) will be used. If > `rms_frame_size_ms`, it will be adjusted to `rms_frame_size_ms`.
+- `rms_frame_size_ms` (int, optional): Convolution window size in milliseconds for RMS calculation. Defaults to 100ms (can be overridden by `RMS_FRAME_SIZE_MS` environment variable). If <= 0, a warning will be logged and default value (100ms) will be used.
+- `rms_output_interval_ms` (int, optional): Output sampling interval in milliseconds for RMS curve. Defaults to 50ms (can be overridden by `RMS_OUTPUT_INTERVAL_MS` environment variable). If <= 0, a warning will be logged and default value (50ms) will be used. If > `rms_frame_size_ms`, it will be adjusted to `rms_frame_size_ms`.
 
 **Returns:**
 
