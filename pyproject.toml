@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speech-detect"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Python library for detecting speech segments and non-speech gaps in audio/video files using FSMN-VAD-ONNX with streaming processing"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = {text = "MIT"}
 dependencies = [
     "numpy>=1.26.4",
     "funasr-onnx>=0.4.1",
-    "ffmpeg-audio>=0.2.0",
+    "ffmpeg-audio>=0.3.0",
     "jieba>=0.42.1",
     "torch>=2.9.1",
 ]
