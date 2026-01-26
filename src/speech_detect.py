@@ -140,8 +140,8 @@ class SpeechDetector:
 
         Returns:
             tuple[list[VadSegment], list[VadSegment], list[RMSPoint]]:
-                - speech_segments: List of speech segments, format: [{"start": ms, "end": ms}, ...]
-                - gaps: List of non-speech gaps, format: [{"start": ms, "end": ms}, ...]
+                - speech_segments: List of speech segments, format: [{"s": ms, "e": ms}, ...]
+                - gaps: List of non-speech gaps, format: [{"s": ms, "e": ms}, ...]
                 - rms_curve: RMS curve data, always computed and returned.
                            Format: [{"ms": int, "value": float}, ...]  # List[RMSPoint]
                 Timestamps are relative to audio start (0-based), in milliseconds.
@@ -259,33 +259,33 @@ class SpeechDetector:
             audio_length_samples: Total number of audio samples.
 
         Returns:
-            list[VadSegment]: List of non-speech gaps, format: [{"start": ms, "end": ms}, ...]
+            list[VadSegment]: List of non-speech gaps, format: [{"s": ms, "e": ms}, ...]
         """
         # Calculate total audio duration in milliseconds
         duration_ms = int(audio_length_samples / SpeechDetector.SAMPLE_RATE * 1000)
 
         # If no speech segments, entire audio is non-speech
         if not speech_segments:
-            return [{"start": 0, "end": duration_ms}]
+            return [{"s": 0, "e": duration_ms}]
 
         gaps = []
 
         # Check for gap at the beginning (before first speech segment)
         first_speech = speech_segments[0]
-        if first_speech["start"] > 0:
-            gaps.append({"start": 0, "end": first_speech["start"]})
+        if first_speech["s"] > 0:
+            gaps.append({"s": 0, "e": first_speech["s"]})
 
         # Check for gaps between speech segments
         for i in range(len(speech_segments) - 1):
-            prev_end = speech_segments[i]["end"]
-            next_start = speech_segments[i + 1]["start"]
+            prev_end = speech_segments[i]["e"]
+            next_start = speech_segments[i + 1]["s"]
             if next_start > prev_end:
-                gaps.append({"start": prev_end, "end": next_start})
+                gaps.append({"s": prev_end, "e": next_start})
 
         # Check for gap at the end (after last speech segment)
         last_speech = speech_segments[-1]
-        if last_speech["end"] < duration_ms:
-            gaps.append({"start": last_speech["end"], "end": duration_ms})
+        if last_speech["e"] < duration_ms:
+            gaps.append({"s": last_speech["e"], "e": duration_ms})
 
         return gaps
 
@@ -298,13 +298,13 @@ class SpeechDetector:
         that should be considered part of continuous speech rather than separate segments.
 
         Args:
-            speech_segments: List of speech segments, format: [{"start": ms, "end": ms}, ...]
+            speech_segments: List of speech segments, format: [{"s": ms, "e": ms}, ...]
                            Must be sorted by start time (which is guaranteed by streaming processing).
             threshold_ms: Gap threshold in milliseconds. Segments with gaps smaller than this
                          will be merged. Must be >= 0.
 
         Returns:
-            list[VadSegment]: Merged speech segments, format: [{"start": ms, "end": ms}, ...]
+            list[VadSegment]: Merged speech segments, format: [{"s": ms, "e": ms}, ...]
         """
         if not speech_segments or len(speech_segments) <= 1:
             return speech_segments
@@ -316,11 +316,11 @@ class SpeechDetector:
         current_segment = speech_segments[0].copy()
 
         for next_segment in speech_segments[1:]:
-            gap = next_segment["start"] - current_segment["end"]
+            gap = next_segment["s"] - current_segment["e"]
 
             if gap <= threshold_ms:
                 # Merge: extend current segment to include next segment
-                current_segment["end"] = next_segment["end"]
+                current_segment["e"] = next_segment["e"]
             else:
                 # Gap is too large, save current segment and start new one
                 merged.append(current_segment)

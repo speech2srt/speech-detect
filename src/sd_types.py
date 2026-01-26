@@ -19,12 +19,12 @@ class VadSegment(TypedDict):
     - Non-speech gaps: Non-speech time periods
 
     Attributes:
-        start: Segment start time in milliseconds (integer).
-        end: Segment end time in milliseconds (integer).
+        s: Segment start time in milliseconds (integer).
+        e: Segment end time in milliseconds (integer).
     """
 
-    start: int
-    end: int
+    s: int
+    e: int
 
 
 class RMSPoint(TypedDict):

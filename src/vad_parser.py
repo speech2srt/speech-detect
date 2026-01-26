@@ -2,7 +2,7 @@
 VAD State Machine Parser
 
 Parses fragmented output from Fsmn_vad_online model and converts it into
-complete {start, end} segment semantics. Handles partial segments that span
+complete {s, e} segment semantics. Handles partial segments that span
 multiple chunks in streaming processing.
 """
 
@@ -17,7 +17,7 @@ class VadParser:
     """
     State machine parser for Fsmn_vad_online fragmented output.
 
-    Converts fragmented VAD model output into complete {start, end} segment semantics.
+    Converts fragmented VAD model output into complete {s, e} segment semantics.
     Maintains state across chunks to handle segments that span multiple processing chunks.
     """
 
@@ -59,8 +59,8 @@ class VadParser:
             if self.current_start_ms != -1:
                 completed_segments.append(
                     {
-                        "start": self.current_start_ms,
-                        "end": end_ms,  # Fsmn_vad_online returns global timestamps
+                        "s": self.current_start_ms,
+                        "e": end_ms,  # Fsmn_vad_online returns global timestamps
                     }
                 )
                 self.current_start_ms = -1  # Reset state
@@ -72,8 +72,8 @@ class VadParser:
         elif beg_ms != -1 and end_ms != -1:
             completed_segments.append(
                 {
-                    "start": beg_ms,  # Fsmn_vad_online returns global timestamps
-                    "end": end_ms,
+                    "s": beg_ms,  # Fsmn_vad_online returns global timestamps
+                    "e": end_ms,
                 }
             )
             # If there was an unclosed start, reset it (new complete segment encountered)
@@ -91,7 +91,7 @@ class VadParser:
                        Note: Fsmn_vad_online returns global timestamps (relative to stream start).
 
         Returns:
-            list[VadSegment]: List of completed speech segments, format: [{"start": ms, "end": ms}, ...]
+            list[VadSegment]: List of completed speech segments, format: [{"s": ms, "e": ms}, ...]
         """
         if not vad_output:
             return []
